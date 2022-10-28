@@ -8,7 +8,7 @@ In other SQL database systems, like Postgres, you can spin up an empty local dat
 
 At first, we thought we might be able to use a local Postgres instance as a stand-in for Snowflake. But this presented many problems. Postgres and Snowflake SQL have dialectic differences. We initially tried maintaining a series of regexes for converting Snowflake SQL into Postgres SQL - for example, anytime our Snowflake query contained JSON parsing using `json:key` syntax, in the test environment it would have to be replaced within the query string with `json ->> key` syntax for Postgres compatibility.
 
-```
+```python
 def translate_to_postgres(self, sql):
     sql = sql.replace('CURRENT_DATE()', 'CURRENT_DATE')
 
@@ -78,7 +78,7 @@ Here's some of the code that supports this:
 
 This function sets the session UUID (or gets it if it's already been set) using environment variables.
 
-```
+```python
 def session_id():
     if environment() in ['test', 'development']:
         env_variable = 'SESSION_UUID'
@@ -93,7 +93,7 @@ def session_id():
 
 This class manages our connection to Snowflake. The `app_settings` variable holds environment-specific secrets, so it will ensure we use the limited test Snowflake/IAM users in the testing environment.
 
-```
+```python
 # Use a single connection in the testing environment as a performance optimization
 @add_metaclass(Singleton if environment() == 'test' else type)
 class WarehouseHook(metaclass=Singleton):
@@ -142,7 +142,7 @@ class WarehouseHook(metaclass=Singleton):
 
 This code is in `conftest.py`, a special file used by pytest for defining setup and teardown hooks to run at the beginning and end of test sessions.
 
-```
+```python
 @pytest.fixture(scope='session', autouse=True)
 def setup_and_teardown(request):
     test_db_hook = WarehouseHook()
@@ -201,7 +201,7 @@ The first optimization we made was only instantiating the tables we need. Our re
 
 The way we accomplished this was by tagging test modules with metadata about which tables they require. At the top of each test module, we define an array variable called `tables_used_by_tests`. When you run a single test module, there is a setup hook that iterates over that array and instantiates all those tables. Other Snowflake objects like stages and file formats are also tagged and created in this way.
 
-```
+```python
 def create_tables(test_db_hook, table_names):
     schemas = set()
     tables = []
@@ -226,7 +226,7 @@ def create_tables(test_db_hook, table_names):
 
 However, this is a bit naive for the use case of running the entire test suite during CI, since there's a lot of overlap between the sets of tables used by various modules. So for this use case, we wrote some code that runs just once at the beginning of the entire test suite and introspects all of the test modules to get the full set of tables used by all tests. Then we can just iterate over that list and create them all at once.
 
-```
+```python
 def collect_all_objects_used_by_tests():
     if __all_tables_used_by_tests and __all_stages_used_by_tests:
         return
@@ -252,7 +252,7 @@ These two use cases - running the whole suite during CI, and running just one mo
 
 One breakthrough that hugely helped with the efficiency of "full" test mode was the use of a stored procedure to instantiate all the tables. Instead of making dozens of separate network calls out to Snowflake to queue up queries to instantiate our tables, we make just two - one to define a stored procedure that contains all the `create table` statements, and one to call that procedure. This saves a lot on the I/O time.
 
-```
+```python
 def create_stored_procedure(commands, db_hook):
     proc = """
         create or replace procedure CREATE_ALL_TABLES()
@@ -294,7 +294,7 @@ We must also deal with cleaning up tables between tests. In some database system
 
 Instead, we must use a teardown hook that runs after every test to iterate over tables that have data and truncate them. We could make use of `tables_used_by_tests` for this too, but we've actually found it's a bit faster and less fraught to just ask Snowflake to tell us which tables are "dirty":
 
-```
+```python
 def truncate_non_empty_tables():
     test_db_hook = WarehouseHook()
     non_empty_tables = test_db_hook.run_query('''
@@ -326,7 +326,7 @@ To improve the experience of writing tests, we've also developed lots of helpers
 
 Here's what a typical basic test might look like:
 
-```
+```python
 def test_build_materialized_view():
     insert_seed_data({
         'public.users': [
@@ -358,7 +358,7 @@ def test_build_materialized_view():
 
 And here's the code behind it:
 
-```
+```python
 def insert_seed_data(seed_data)
     # convert into an insert query and run
     snowflake_hook = WarehouseHook()
