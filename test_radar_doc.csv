@@ -1,0 +1,12 @@
+name,ring,quadrant,isNew,description
+Ruby 3.0,Hold,Languages & Frameworks,FALSE,
+Ruby 3.1,Adopt,Languages & Frameworks,FALSE,
+Ruby 3.2,Trial,Languages & Frameworks,FALSE,
+Node 14,Hold,Languages & Frameworks,FALSE,Node 14 is EOL
+Node 16,Hold,Languages & Frameworks,TRUE,Node 16 is EOL
+Node 18,Trial,Languages & Frameworks,TRUE,Node 18 is not EOL but we should be able to get to 20 from 18 fairly easily
+Node 20,Trial,Languages & Frameworks,TRUE,
+AWS,Adopt,Platforms,FALSE,
+Google Cloud,Assess,Platforms,FALSE,We use Google Cloud for very specific and limited use cases
+Microsoft Azure,Hold,Platforms,FALSE,We don't likely have a good use case for using Azure
+Containeriazation,Hold,Techniques,FALSE,
